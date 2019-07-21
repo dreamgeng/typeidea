@@ -1,0 +1,6 @@
+<u1>
+    {% for post in posts %}
+    <!-- <li><a href="/post/{{ post_id }}.html">{{ post.title }}</a> -->
+    <li><a href="{% url 'post-detail' post_id %}">{{ post.title }}</a>
+    {% endfor %}
+</u1>
