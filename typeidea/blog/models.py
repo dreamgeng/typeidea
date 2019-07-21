@@ -26,8 +26,24 @@ class Category(models.Model):
     class Meta:
         verbose_name = verbose_name_plural = '分类'
 
-    # def __str__(self):
-    #     return self.name
+    def __str__(self):
+        return self.name
+
+    @classmethod
+    def get_navs(cls):
+        categories = cls.objects.filter(status=cls.STATUS_NORMAL)
+        nav_categories = []
+        normal_categories = []
+        for cate in categories:
+            if cate.is_nav:
+                nav_categories.append(cate)
+            else:
+                normal_categories.append(cate)
+
+        return {
+            'navs': nav_categories,
+            'categories': normal_categories,
+        }
 
 
 class Tag(models.Model):
@@ -47,8 +63,8 @@ class Tag(models.Model):
         verbose_name = verbose_name_plural = '标签'
         ordering = ['-id']
 
-    # def __str__(self):
-    #     return self.name
+    def __str__(self):
+        return self.name
 
 
 class Post(models.Model):
@@ -71,10 +87,45 @@ class Post(models.Model):
     tag = models.ManyToManyField(Tag, verbose_name="标签")
     owner = models.ForeignKey(User, verbose_name="作者", on_delete=models.DO_NOTHING)
     created_time = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
-
-    # pv = models.PositiveIntegerField(default=1)
-    # uv = models.PositiveIntegerField(default=1)
+# 用来统计每篇文章的访问量
+    pv = models.PositiveIntegerField(default=1)
+    uv = models.PositiveIntegerField(default=1)
 
     class Meta:
         verbose_name = verbose_name_plural = "文章"
         ordering = ['-id']
+
+    def __str__(self):
+        return self.title
+
+    @staticmethod
+    def get_by_tag(tag_id):
+        try:
+            tag = Tag.objects.get(id=tag_id)
+        except Tag.DoesNotExist:
+            tag=None
+            post_list = []
+        else:
+            post_list = tag.post_set.filter(status=Post.STATUS_NORMAL)\
+                .select_related('owner', 'category')
+        return post_list, tag
+
+    @staticmethod
+    def get_by_category(category_id):
+        try:
+            category = Category.objects.get(id=category_id)
+        except Category.DoesNotExist:
+            category = None
+            post_list = []
+        else:
+            post_list = category.post_set.filter(status=Post.STATUS_NORMAL)\
+                .select_related('owner', 'category')
+        return post_list, category
+
+    @classmethod
+    def latest_posts(cls):
+        queryset = cls.objects.filter(status=cls.STATUS_NORMAL)
+
+    @classmethod
+    def hot_posts(cls):
+        return cls.objects.filter(status=cls.STATUS_NORMAL).order_by('-pv')
